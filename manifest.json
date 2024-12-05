@@ -1,0 +1,44 @@
+{
+  "name": "CMC Translate Extension",
+  "version": "0.0.1",
+  "manifest_version": 2,
+  "description": "CMC Translate Extension",
+  "icons": {
+    "16": "images/icon.png",
+    "48": "images/icon.png"
+  },
+  "browser_action": {
+    "default_icon": {
+      "19": "images/icon.png",
+      "38": "images/icon.png"
+    },
+    "default_title": "CMC Translate Extension",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "page": "background.html",
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "scripts/content.js",
+        "scripts/background.js"
+      ],
+      "css": [
+        "styles/font.css",
+        "styles/main.css"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "clipboardWrite",
+    "storage"
+  ]
+}
