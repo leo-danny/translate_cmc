@@ -202,30 +202,30 @@ async function translateVisibleTextFirst() {
 
   // Translate visible nodes first
   if (visibleNodes.length > 0) {
-    const batchSize = 100;
+    // const batchSize = 100;
 
-    for (let i = 0; i < visibleNodes.length; i += batchSize) {
-      const batch = visibleNodes.slice(i, i + batchSize);
-      const batchTexts = batch.map(item => originalTexts[item.index]);
-      const translatedBatch = await translateText(batchTexts);
+    // for (let i = 0; i < visibleNodes.length; i += batchSize) {
+    //   const batch = visibleNodes.slice(i, i + batchSize);
+    //   const batchTexts = batch.map(item => originalTexts[item.index]);
+    //   const translatedBatch = await translateText(batchTexts);
 
-      batch.forEach((nodeInfo, batchIndex) => {
-        if (translatedBatch[batchIndex]) {
-          translateTexts[nodeInfo.index] = translatedBatch[batchIndex];
-          nodeInfo.node.nodeValue = translatedBatch[batchIndex];
-        }
-      });
-    }
+    //   batch.forEach((nodeInfo, batchIndex) => {
+    //     if (translatedBatch[batchIndex]) {
+    //       translateTexts[nodeInfo.index] = translatedBatch[batchIndex];
+    //       nodeInfo.node.nodeValue = translatedBatch[batchIndex];
+    //     }
+    //   });
+    // }
 
-    // const visibleTexts = visibleNodes.map(item => originalTexts[item.index]);
-    // const translatedVisible = await translateText(visibleTexts);
+    const visibleTexts = visibleNodes.map(item => originalTexts[item.index]);
+    const translatedVisible = await translateText(visibleTexts);
 
-    // visibleNodes.forEach((nodeInfo, i) => {
-    //   if (translatedVisible[i]) {
-    //     translateTexts[nodeInfo.index] = translatedVisible[i];
-    //     nodeInfo.node.nodeValue = translatedVisible[i];
-    //   }
-    // });
+    visibleNodes.forEach((nodeInfo, i) => {
+      if (translatedVisible[i]) {
+        translateTexts[nodeInfo.index] = translatedVisible[i];
+        nodeInfo.node.nodeValue = translatedVisible[i];
+      }
+    });
   }
 
   // Then translate remaining nodes in batches
