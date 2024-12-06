@@ -6,12 +6,6 @@ let db = null;
 const DB_NAME = 'translationDB';
 const STORE_NAME = 'pageTranslations';
 
-const resetState = () => {
-  originalTexts = [];
-  translateTexts = [];
-  textNodes = [];
-};
-
 const initDB = () => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
@@ -80,6 +74,30 @@ const getFromIndexedDB = async (url) => {
   });
 }
 
+const removeFromIndexedDB = async (url) => {
+  if (!db) throw new Error('Database not initialized');
+  const transaction = db.transaction([STORE_NAME], 'readwrite');
+  const store = transaction.objectStore(STORE_NAME);
+
+  return new Promise(async (resolve, reject) => {
+    const request = await store.delete(url);
+    console.log("🚀 ~ returnnewPromise ~ request:", request)
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const resetState = async (cleanCache_url = '') => {
+  if (cleanCache_url) {
+    console.log("🚀 ~ resetState ~ cleanCache_url:", cleanCache_url)
+    await removeFromIndexedDB(cleanCache_url);
+  }
+
+  originalTexts = [];
+  translateTexts = [];
+  textNodes = [];
+};
+
 function getTextNodes() {
 
   function traverse(node) {
@@ -112,7 +130,7 @@ function getTextNodes() {
 async function handlePageLoad() {
   await getTextNodes();
   console.log('textNodes', textNodes);
-  const currentUrl = window.location.pathname;
+  const currentUrl = window.location.href;
   console.log("🚀 ~ handlePageLoad ~ currentUrl:", currentUrl)
   const currentLanguage = localStorage.getItem('language') || 'vi';
 
@@ -143,7 +161,7 @@ async function handleTranslate(language) {
     await getTextNodes();
   };
 
-  const currentUrl = window.location.pathname;
+  const currentUrl = window.location.href;
 
   if (language === 'vi') {
     textNodes.forEach((node, index) => {
@@ -276,13 +294,14 @@ async function translateText(textArray) {
 
 }
 
-const handleNavigation = async () => {
-  resetState();
+const handleNavigation = async (url = '') => {
+  await resetState(url);
   await handlePageLoad();
 };
 
 const observeUrlChanges = () => {
   let lastUrl = window.location.href;
+
 
   const observer = new MutationObserver(() => {
     const currentUrl = window.location.href;
@@ -330,10 +349,21 @@ const init = async () => {
   // await waitForNetworkIdle();
   await initDB();
   observeUrlChanges();
-
   // setTimeout(async () => {
   await handlePageLoad();
   // }, 3000);
+
+
+  document.addEventListener('click', (e) => {
+    if (e.target.tagName === 'A' &&
+      /^[0-9]+$/.test(e.target.textContent.trim()) &&
+      e.target.classList.contains('nav-link')) {
+      console.log("🚀 ~ document.addEventListener ~ e.target.tagName:", e.target.tagName)
+      setTimeout(() => {
+        handleNavigation(window.location.href);
+      }, 1000);
+    }
+  });
 };
 
 const myInterval = setInterval(async () => {
