@@ -1,27 +1,47 @@
-# CMC Translate Extension
+# Privacy Policy for CMC Translate Extension
 
-## Giải thích các trường trong `manifest.json`
+Last updated: 06-12-2024
 
-- **`name`**: Tên của extension.
-- **`version`**: Phiên bản hiện tại của extension, theo định dạng `MAJOR.MINOR.PATCH`.
-- **`manifest_version`**: Phiên bản của manifest. Ở đây sử dụng phiên bản 2 (chuẩn cũ).
-- **`description`**: Mô tả ngắn gọn về mục đích của extension.
-- **`icons`**: Định nghĩa các biểu tượng được sử dụng bởi extension ở các kích thước khác nhau.
-- **`browser_action`**:
-  - `default_icon`: Định nghĩa icon cho thanh công cụ của trình duyệt.
-  - `default_title`: Tooltip hiển thị khi di chuột vào icon.
-  - `default_popup`: Định nghĩa tệp HTML sẽ hiển thị khi người dùng nhấp vào icon.
-- **`background`**:
-  - `page`: Đường dẫn tới tệp HTML chạy nền.
-  - `persistent`: Nếu là `false`, sử dụng event pages (tiết kiệm tài nguyên).
-- **`content_scripts`**: 
-  - `matches`: URL mà content script được áp dụng.
-  - `js`: Tệp JavaScript được inject vào trang.
-  - `css`: Tệp CSS được inject vào trang.
-  - `run_at`: Thời điểm script được chạy.
-- **`permissions`**:
-  - `clipboardWrite`: Cho phép ghi dữ liệu vào clipboard.
-  - `storage`: Cho phép sử dụng API lưu trữ cục bộ của trình duyệt.
+## Data Collection and Usage
 
-## Ghi chú
-File `manifest.json` không hỗ trợ comments, vì vậy hãy tham khảo tệp README này để hiểu chi tiết các trường.
+Our extension collects and processes the following data:
+
+1. **Website Content**: 
+   - Text content from pages on evnhanoi.vn that you choose to translate
+   - This data is temporarily processed to provide translation services
+
+2. **Cache Data**:
+   - Previously translated text and results
+   - Stored locally on your device for performance optimization
+
+3. **User Preferences**:
+   - Language settings and translation preferences
+   - Stored locally on your device
+
+## Data Storage
+
+- All data is stored locally on your device using Chrome's storage API
+- No personal data is transmitted to our servers
+- Translation requests are sent to CMC Translate API with text content only
+
+## Data Sharing
+
+- We do not sell, trade, or transfer your data to third parties
+- Text content is only shared with CMC Translate API for translation purposes
+- No personal identifying information is collected or transmitted
+
+## Security
+
+- All API communications are encrypted using HTTPS
+- Local storage is secured by Chrome's built-in security features
+
+## User Rights
+
+You have the right to:
+- Clear cached data through extension settings
+- Disable the extension at any time
+- Control which pages are translated
+
+## Contact
+
+If you have questions about this privacy policy, please contact us at: ikmscmc@gmail.com
