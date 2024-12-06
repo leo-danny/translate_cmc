@@ -202,7 +202,7 @@ async function translateVisibleTextFirst() {
 
   // Translate visible nodes first
   if (visibleNodes.length > 0) {
-    const batchSize = 75;
+    const batchSize = 100;
 
     for (let i = 0; i < visibleNodes.length; i += batchSize) {
       const batch = visibleNodes.slice(i, i + batchSize);
