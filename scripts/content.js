@@ -161,7 +161,7 @@ async function handleTranslate(language) {
 
   try {
     await translateVisibleTextFirst();
-    if (document.readyState === 'complete') {
+    if (document.readyState === 'complete' && translateTexts.length > 0) {
       console.log("🚀 ~ handleTranslate ~ document.readyState:", document.readyState, {
         textNodes_length: textNodes.length,
         originalTexts: originalTexts,
