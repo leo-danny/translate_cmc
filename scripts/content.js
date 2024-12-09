@@ -308,27 +308,28 @@ const myIntervalFunc = () => {
         }, document.readyState)
         if (lastTextNote_length === textNodes.length && translateTexts.length > 0) return
         console.log("🚀 ~ handleTranslate ~ language:1111111111111", language)
-
         await init();
       }
       if (document.readyState === 'complete') {
-        getTextNodes()
-        console.log("🚀 ~ myInterval ~ textNodes.length:", textNodes.length, lastTextNote_length, {
-          url: window.location.href,
-          textNodes_length: textNodes.length,
-          originalTexts: originalTexts,
-          translations: translateTexts
-        })
-        if (lastTextNote_length === textNodes.length && translateTexts.length > 0) {
-          await saveToIndexedDB({
+        setTimeout(async () => {
+          getTextNodes()
+          console.log("🚀 ~ myInterval ~ textNodes.length:", textNodes.length, lastTextNote_length, {
             url: window.location.href,
             textNodes_length: textNodes.length,
             originalTexts: originalTexts,
             translations: translateTexts
-          }, document.readyState);
-        } else {
-          await init()
-        }
+          })
+          if (lastTextNote_length === textNodes.length && translateTexts.length > 0) {
+            await saveToIndexedDB({
+              url: window.location.href,
+              textNodes_length: textNodes.length,
+              originalTexts: originalTexts,
+              translations: translateTexts
+            }, document.readyState);
+          } else {
+            await init()
+          }
+        }, 1000);
         clearInterval(myInterval);
       }
     }
