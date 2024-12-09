@@ -371,10 +371,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           node.nodeValue = translateTexts[index];
         });
       }
-    } else {
-      textNodes.forEach((node, index) => {
-        node.nodeValue = translateTexts[index];
-      });
+      // } else {
+      // textNodes.forEach((node, index) => {
+      //   node.nodeValue = translateTexts[index];
+      // });
       myIntervalFunc()
     }
 
