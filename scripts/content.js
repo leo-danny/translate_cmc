@@ -3,13 +3,17 @@ let originalTexts = [];
 let translateTexts = [];
 let textNodes = [];
 let db = null;
+let language;
+let loadUrlChange = false;
 const DB_NAME = 'translationDB';
 const STORE_NAME = 'pageTranslations';
 
 const initDB = () => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
-
+    if (db) {
+      resolve(db);
+    }
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       db = request.result;
@@ -27,7 +31,9 @@ const initDB = () => {
 
 // Function to save data to IndexedDB
 const saveToIndexedDB = async (data) => {
-  if (!db) throw new Error('Database not initialized');
+  if (!db) {
+    await initDB();
+  }
   const transaction = db.transaction([STORE_NAME], 'readwrite');
   const store = transaction.objectStore(STORE_NAME);
 
@@ -45,7 +51,9 @@ const saveToIndexedDB = async (data) => {
 
 // Function to get data from IndexedDB
 const getFromIndexedDB = async (url) => {
-  if (!db) throw new Error('Database not initialized');
+  if (!db) {
+    await initDB();
+  }
   const transaction = db.transaction([STORE_NAME], 'readonly');
   const store = transaction.objectStore(STORE_NAME);
 
@@ -53,8 +61,6 @@ const getFromIndexedDB = async (url) => {
     const request = store.get(url);
     request.onsuccess = () => {
       // Check if result exists first
-      console.log("🚀 ~ returnnewPromise ~ request.result:", request.result)
-
       if (!request.result) {
         resolve(null); // or reject(new Error('Data not found'))
         return;
@@ -75,7 +81,9 @@ const getFromIndexedDB = async (url) => {
 }
 
 const removeFromIndexedDB = async (url) => {
-  if (!db) throw new Error('Database not initialized');
+  if (!db) {
+    await initDB();
+  }
   const transaction = db.transaction([STORE_NAME], 'readwrite');
   const store = transaction.objectStore(STORE_NAME);
 
@@ -89,19 +97,16 @@ const removeFromIndexedDB = async (url) => {
 
 const resetState = async (cleanCache_url = '') => {
   if (cleanCache_url) {
-    console.log("🚀 ~ resetState ~ cleanCache_url:", cleanCache_url)
     await removeFromIndexedDB(cleanCache_url);
   }
-
   originalTexts = [];
-  translateTexts = [];
   textNodes = [];
+  translateTexts = []
 };
 
 function getTextNodes() {
-
+  // resetState()
   function traverse(node) {
-
     // Check for text content in SCRIPT, STYLE, NOSCRIPT tags
     if (node.nodeType === Node.ELEMENT_NODE &&
       ['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(node.tagName)) {
@@ -111,7 +116,8 @@ function getTextNodes() {
     if (node.nodeType === Node.TEXT_NODE) {
       const textContent = node.nodeValue.trim();
       // Include text that's not just whitespace and numbers
-      if (textContent && !/^\s*$/.test(textContent) && !/^\d+$/.test(textContent) && textContent.length > 1) {
+      if (textContent && !/^\s*$/.test(textContent) && !/^\d+$/.test(textContent) && textContent.length > 1 && !node._textNode) {
+        node._textNode = "translated"
         textNodes.push(node);
         originalTexts.push(textContent);
       }
@@ -128,22 +134,14 @@ function getTextNodes() {
 
 
 async function handlePageLoad() {
-  await getTextNodes();
-  console.log('textNodes', textNodes);
-  const currentUrl = window.location.href;
-  console.log("🚀 ~ handlePageLoad ~ currentUrl:", currentUrl)
-  const currentLanguage = localStorage.getItem('language') || 'vi';
-
+  const currentLanguage = language
   if (currentLanguage === 'vi') return
 
   try {
-    const cachedData = await getFromIndexedDB(currentUrl);
-    console.log("🚀 ~ handlePageLoad ~ cachedData:", cachedData)
-
+    const cachedData = await getFromIndexedDB(window.location.href);
     if (cachedData && cachedData.textNodes_length === textNodes.length) {
       originalTexts = cachedData.originalTexts;
       translateTexts = cachedData.translations;
-
       textNodes.forEach((node, index) => {
         node.nodeValue = translateTexts[index];
       });
@@ -157,47 +155,26 @@ async function handlePageLoad() {
 }
 
 async function handleTranslate(language) {
-  if (!textNodes?.length) {
+  if (textNodes.length <= 0) {
     await getTextNodes();
   };
 
-  const currentUrl = window.location.href;
-
-  if (language === 'vi') {
-    textNodes.forEach((node, index) => {
-      node.nodeValue = originalTexts[index];
-    });
-    return;
-  }
-
   try {
-    const cachedData = await getFromIndexedDB(currentUrl);
-
-    if (cachedData && cachedData.textNodes_length === textNodes.length) {
-      originalTexts = cachedData.originalTexts;
-      translateTexts = cachedData.translations;
-
-      textNodes.forEach((node, index) => {
-        node.nodeValue = translateTexts[index];
-      });
-    } else {
-      await translateVisibleTextFirst();
-      console.log({
-        url: currentUrl,
+    await translateVisibleTextFirst();
+    if (document.readyState === 'complete') {
+      console.log("🚀 ~ handleTranslate ~ document.readyState:", document.readyState, {
+        textNodes_length: textNodes.length,
+        originalTexts: originalTexts,
+        translations: translateTexts
+      })
+      await saveToIndexedDB({
+        url: window.location.href,
         textNodes_length: textNodes.length,
         originalTexts: originalTexts,
         translations: translateTexts
       });
-      if (translateTexts && translateTexts?.length > 0) {
-        await saveToIndexedDB({
-          url: currentUrl,
-          textNodes_length: textNodes.length,
-          originalTexts: originalTexts,
-          translations: translateTexts
-        });
-      }
-
     }
+
   } catch (error) {
     console.error('Error handling translation:', error);
   }
@@ -220,24 +197,8 @@ async function translateVisibleTextFirst() {
 
   // Translate visible nodes first
   if (visibleNodes.length > 0) {
-    // const batchSize = 100;
-
-    // for (let i = 0; i < visibleNodes.length; i += batchSize) {
-    //   const batch = visibleNodes.slice(i, i + batchSize);
-    //   const batchTexts = batch.map(item => originalTexts[item.index]);
-    //   const translatedBatch = await translateText(batchTexts);
-
-    //   batch.forEach((nodeInfo, batchIndex) => {
-    //     if (translatedBatch[batchIndex]) {
-    //       translateTexts[nodeInfo.index] = translatedBatch[batchIndex];
-    //       nodeInfo.node.nodeValue = translatedBatch[batchIndex];
-    //     }
-    //   });
-    // }
-
     const visibleTexts = visibleNodes.map(item => originalTexts[item.index]);
     const translatedVisible = await translateText(visibleTexts);
-
     visibleNodes.forEach((nodeInfo, i) => {
       if (translatedVisible[i]) {
         translateTexts[nodeInfo.index] = translatedVisible[i];
@@ -253,7 +214,6 @@ async function translateVisibleTextFirst() {
       const batch = remainingNodes.slice(i, i + batchSize);
       const batchTexts = batch.map(item => originalTexts[item.index]);
       const translatedBatch = await translateText(batchTexts);
-
       batch.forEach((nodeInfo, batchIndex) => {
         if (translatedBatch[batchIndex]) {
           translateTexts[nodeInfo.index] = translatedBatch[batchIndex];
@@ -296,12 +256,13 @@ async function translateText(textArray) {
 
 const handleNavigation = async (url = '') => {
   await resetState(url);
+  getTextNodes();
   await handlePageLoad();
 };
 
 const observeUrlChanges = () => {
+  if (loadUrlChange === true) return;
   let lastUrl = window.location.href;
-
 
   const observer = new MutationObserver(() => {
     const currentUrl = window.location.href;
@@ -315,91 +276,132 @@ const observeUrlChanges = () => {
     subtree: true,
     childList: true
   });
+  loadUrlChange = true;
 };
-
-const waitForPageLoad = () => {
-  return new Promise(resolve => {
-    if (document.readyState === 'complete') {
-      resolve();
-    } else {
-      window.addEventListener('load', resolve);
-    }
-  });
-};
-
-const waitForNetworkIdle = () => {
-  return new Promise(resolve => {
-    let timer;
-    const observer = new PerformanceObserver(list => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        observer.disconnect();
-        resolve();
-      }, 300); // Đợi 500ms sau request cuối cùng
-    });
-
-    observer.observe({ entryTypes: ['resource'] });
-  });
-};
-
 
 // Initialize when extension loads
 const init = async () => {
-  // await waitForPageLoad();
-  // await waitForNetworkIdle();
-  await initDB();
-  observeUrlChanges();
-  // setTimeout(async () => {
+  if (!db) {
+    await initDB();
+  }
   await handlePageLoad();
-  // }, 3000);
-
-
-  document.addEventListener('click', (e) => {
-    if (e.target.tagName === 'A' &&
-      /^[0-9]+$/.test(e.target.textContent.trim()) &&
-      e.target.classList.contains('nav-link')) {
-      console.log("🚀 ~ document.addEventListener ~ e.target.tagName:", e.target.tagName)
-      setTimeout(() => {
-        handleNavigation(window.location.href);
-      }, 1000);
-    }
-  });
+  observeUrlChanges();
 };
 
-const myInterval = setInterval(async () => {
-  if (document.readyState === 'complete') {
-    console.log("🚀 ~ myInterval ~ document.readyState:", document.readyState)
-    clearInterval(myInterval);
-    await init();
-  }
-}, 1000);
+const myIntervalFunc = () => {
+  const myInterval = setInterval(async () => {
+    console.log(language, 'language');
+    if (language === 'vi') {
+      await initDB();
+      clearInterval(myInterval);
+    }
+    if (language) {
+      const lastTextNote_length = textNodes.length
+      console.log("🚀 ~ myInterval ~ textNodes:", lastTextNote_length)
+      if (document.readyState === 'interactive') {
+        getTextNodes()
+        console.log("🚀 ~ myInterval ~ textNodes.length:", textNodes.length, lastTextNote_length, {
+          url: window.location.href,
+          textNodes_length: textNodes.length,
+          originalTexts: originalTexts,
+          translations: translateTexts
+        }, document.readyState)
+        if (lastTextNote_length === textNodes.length && translateTexts.length > 0) return
+        console.log("🚀 ~ handleTranslate ~ language:1111111111111", language)
 
+        await init();
+      }
+      if (document.readyState === 'complete') {
+        getTextNodes()
+        console.log("🚀 ~ myInterval ~ textNodes.length:", textNodes.length, lastTextNote_length, {
+          url: window.location.href,
+          textNodes_length: textNodes.length,
+          originalTexts: originalTexts,
+          translations: translateTexts
+        })
+        if (lastTextNote_length === textNodes.length && translateTexts.length > 0) {
+          await saveToIndexedDB({
+            url: window.location.href,
+            textNodes_length: textNodes.length,
+            originalTexts: originalTexts,
+            translations: translateTexts
+          }, document.readyState);
+        } else {
+          await init()
+        }
+        clearInterval(myInterval);
+      }
+    }
+  }, 1000)
+  return myInterval
+};
 
-// window.addEventListener('popstate', handleNavigation);
-// window.addEventListener('state', handleNavigation);
+myIntervalFunc()
 
-// // Intercept history methods
-// const originalPushState = history.pushState;
-// history.pushState = function () {
-//   originalPushState.apply(this, arguments);
-//   handleNavigation();
-// };
-
-// const originalReplaceState = history.replaceState;
-// history.replaceState = function () {
-//   originalReplaceState.apply(this, arguments);
-//   handleNavigation();
-// };
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === 'translate') {
-    handleTranslate(request.language);
-    localStorage.setItem('language', request.language);
+    language = request.language
+    console.log("🚀 ~ chrome.runtime.onMessage.addListener ~ language:", language)
+    if (!language) return
     sendResponse({ status: 'success' });
-    return true;
-  } else if (request.action === 'getLanguage') {
-    const language = localStorage.getItem('language')
-    sendResponse({ language: language || 'vi' });
+
+    if (language === 'vi') {
+      const cachedData = await getFromIndexedDB(window.location.href);
+      console.log("🚀 ~ chrome.runtime.onMessage.addListener ~ cachedData:", cachedData)
+      // if (cachedData && cachedData.textNodes_length === textNodes.length) {
+      //   originalTexts = cachedData.originalTexts;
+      //   translateTexts = cachedData.translations;
+      //   textNodes.forEach((node, index) => {
+      //     node.nodeValue = originalTexts[index];
+      //   });
+      // } else {
+      textNodes.forEach((node, index) => {
+        node.nodeValue = originalTexts[index];
+      });
+      // }
+      return true
+    }
+    if (document.readyState === 'complete') {
+      const cachedData = await getFromIndexedDB(window.location.href);
+      if (cachedData && cachedData.textNodes_length === textNodes.length) {
+        originalTexts = cachedData.originalTexts;
+        translateTexts = cachedData.translations;
+        textNodes.forEach((node, index) => {
+          node.nodeValue = translateTexts[index];
+        });
+      }
+    } else {
+      textNodes.forEach((node, index) => {
+        node.nodeValue = translateTexts[index];
+      });
+      myIntervalFunc()
+    }
+
     return true;
   }
 });
+
+chrome.runtime.sendMessage({
+  type: "getLanguage",
+  payload: "getLanguage"
+}, response => {
+  if (chrome.runtime.lastError) {
+    console.error(chrome.runtime.lastError);
+    return;
+  }
+  console.log("🚀 ~ response:", response);
+  const foundLanguage = response.language;
+  language = foundLanguage
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.tagName === 'A' &&
+    /^[0-9]+$/.test(e.target.textContent.trim()) &&
+    e.target.classList.contains('nav-link')) {
+    setTimeout(() => {
+      handleNavigation(window.location.href);
+    }, 1000);
+  }
+});
+
+console.log('🚀 Application initialized');
