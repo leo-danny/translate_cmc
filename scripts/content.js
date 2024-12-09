@@ -248,7 +248,7 @@ async function translateText(textArray) {
     return data;
 
   } catch (error) {
-    console.error(`Translation failed:`, error)
+    console.error(`Translation failed: error api`, error)
     return [];
   }
 
