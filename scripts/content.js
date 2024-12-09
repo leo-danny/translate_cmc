@@ -188,11 +188,15 @@ async function translateVisibleTextFirst() {
   // Categorize nodes as visible or remaining
   textNodes.forEach((node, index) => {
     const rect = node.parentNode.getBoundingClientRect();
-    if (rect.top < window.innerHeight && rect.bottom > 0) {
-      visibleNodes.push({ node, index });
-    } else {
-      remainingNodes.push({ node, index });
+    if (!node._textNode_Translated) {
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        visibleNodes.push({ node, index });
+      } else {
+        remainingNodes.push({ node, index });
+      }
     }
+    console.log("🚀 ~ textNodes.forEach ~ node._textNode_Translated:", node._textNode_Translated)
+    node._textNode_Translated = "translated"
   });
 
   // Translate visible nodes first
@@ -209,7 +213,7 @@ async function translateVisibleTextFirst() {
 
   // Then translate remaining nodes in batches
   if (remainingNodes.length > 0) {
-    const batchSize = 100;
+    const batchSize = 20;
     for (let i = 0; i < remainingNodes.length; i += batchSize) {
       const batch = remainingNodes.slice(i, i + batchSize);
       const batchTexts = batch.map(item => originalTexts[item.index]);
@@ -296,9 +300,8 @@ const myIntervalFunc = () => {
       clearInterval(myInterval);
     }
     if (language) {
-      const lastTextNote_length = textNodes.length
-      console.log("🚀 ~ myInterval ~ textNodes:", lastTextNote_length)
       if (document.readyState === 'interactive') {
+        const lastTextNote_length = textNodes.length
         getTextNodes()
         console.log("🚀 ~ myInterval ~ textNodes.length:", textNodes.length, lastTextNote_length, {
           url: window.location.href,
@@ -311,15 +314,19 @@ const myIntervalFunc = () => {
         await init();
       }
       if (document.readyState === 'complete') {
-        setTimeout(async () => {
+        const lastTextNote_length = textNodes.length
+        let count = 0;
+        clearInterval(myInterval)
+        const myIntervalRetry = setInterval(async () => {
           getTextNodes()
-          console.log("🚀 ~ myInterval ~ textNodes.length:", textNodes.length, lastTextNote_length, {
-            url: window.location.href,
-            textNodes_length: textNodes.length,
-            originalTexts: originalTexts,
-            translations: translateTexts
-          })
           if (lastTextNote_length === textNodes.length && translateTexts.length > 0) {
+            console.log("🚀 ~ myInterval ~ textNodes.length:", textNodes.length, lastTextNote_length, {
+              url: window.location.href,
+              textNodes_length: textNodes.length,
+              originalTexts: originalTexts,
+              translations: translateTexts,
+              count
+            })
             await saveToIndexedDB({
               url: window.location.href,
               textNodes_length: textNodes.length,
@@ -327,10 +334,20 @@ const myIntervalFunc = () => {
               translations: translateTexts
             }, document.readyState);
           } else {
+            console.log("🚀 ~ myInterval ~ textNodes.length:", textNodes.length, lastTextNote_length, {
+              url: window.location.href,
+              textNodes_length: textNodes.length,
+              originalTexts: originalTexts,
+              translations: translateTexts,
+              count
+            })
             await init()
           }
+          count++
+          if (count === 3) {
+            clearInterval(myIntervalRetry)
+          }
         }, 1000);
-        clearInterval(myInterval);
       }
     }
   }, 1000)
