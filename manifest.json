@@ -37,8 +37,6 @@
   ],
   "permissions": [
     "activeTab",
-    "tabs",
-    "clipboardWrite",
     "storage"
   ]
 }

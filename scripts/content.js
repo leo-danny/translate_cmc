@@ -213,7 +213,7 @@ async function translateVisibleTextFirst() {
 
   // Then translate remaining nodes in batches
   if (remainingNodes.length > 0) {
-    const batchSize = 20;
+    const batchSize = 50;
     for (let i = 0; i < remainingNodes.length; i += batchSize) {
       const batch = remainingNodes.slice(i, i + batchSize);
       const batchTexts = batch.map(item => originalTexts[item.index]);
@@ -364,15 +364,19 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     sendResponse({ status: 'success' });
 
     if (language === 'vi') {
-      const cachedData = await getFromIndexedDB(window.location.href);
-      console.log("🚀 ~ chrome.runtime.onMessage.addListener ~ cachedData:", cachedData)
-      // if (cachedData && cachedData.textNodes_length === textNodes.length) {
-      //   originalTexts = cachedData.originalTexts;
-      //   translateTexts = cachedData.translations;
-      //   textNodes.forEach((node, index) => {
-      //     node.nodeValue = originalTexts[index];
-      //   });
+
+      // if (!textNodes) {
+      //   const cachedData = await getFromIndexedDB(window.location.href);
+      //   console.log("🚀 ~ chrome.runtime.onMessage.addListener ~ cachedData:", cachedData)
+      //   if (cachedData && cachedData.textNodes_length === textNodes.length) {
+      //     originalTexts = cachedData.originalTexts;
+      //     translateTexts = cachedData.translations;
+      //     textNodes.forEach((node, index) => {
+      //       node.nodeValue = originalTexts[index];
+      //     });
+      //   }
       // } else {
+      getTextNodes()
       textNodes.forEach((node, index) => {
         node.nodeValue = originalTexts[index];
       });
